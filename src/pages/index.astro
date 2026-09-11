@@ -1,0 +1,73 @@
+---
+import { getCollection } from 'astro:content';
+import Layout from '../layouts/Layout.astro';
+import { site, noteUrl, formatDate } from '../site';
+const notes = (await getCollection('notes', ({ data }) => !data.draft)).sort((a, b) => b.data.date.valueOf() - a.data.date.valueOf());
+const categories = [...new Set(notes.map(note => note.data.category))];
+const tags = new Set(notes.flatMap(note => note.data.tags));
+---
+<Layout>
+  <section class="hero">
+    <div class="hero-copy">
+      <div class="eyebrow"><span class="status-dot"></span> A LITTLE SPACE FOR BIG IDEAS</div>
+      <h1>记录当下，<br /><span>连接未来。</span><span class="hero-star" aria-hidden="true">✳</span></h1>
+      <p>{site.tagline}<br />{site.description}</p>
+      <a class="primary-link" href="#notes">探索我的笔记 <span>↗</span></a>
+    </div>
+    <div class="hero-art" aria-hidden="true">
+      <div class="orbit orbit-one"></div><div class="orbit orbit-two"></div>
+      <div class="floating-label label-top">THINK. WRITE. REPEAT.</div>
+      <div class="code-window"><div class="window-dots"><i></i><i></i><i></i><span>my-mind.ts</span></div><pre><span class="code-purple">const</span> notebook = &lbrace;
+  author: <span class="code-green">'XFH'</span>,
+  ideas: <span class="code-green">'无限可能'</span>,
+  learning: <span class="code-purple">true</span>,
+  <span class="code-comment">// 每一天，进步一点点</span>
+  grow: () =&gt; <span class="code-green">'↗'</span>
+&rbrace;;</pre><div class="window-bottom"><span class="status-dot"></span> Always a work in progress</div></div>
+      <div class="floating-label label-bottom"><span>✦</span> 灵感，正在发生</div>
+    </div>
+  </section>
+  <section class="stats" aria-label="笔记统计"><div><strong>{String(notes.length).padStart(2, '0')}</strong><span>篇笔记</span></div><div><strong>{String(categories.length).padStart(2, '0')}</strong><span>个分类</span></div><div><strong>{String(tags.size).padStart(2, '0')}</strong><span>个标签</span></div><p>积累的不只是文字，<br /><span>也是看待世界的方式。</span></p></section>
+  <section id="notes" class="notes-section">
+    <div class="section-heading"><div><div class="eyebrow">THE NOTEBOOK</div><h2>我的知识碎片<span>.</span></h2></div><label class="search"><span aria-hidden="true">⌕</span><input id="search" type="search" placeholder="搜索标题、标签、正文…" aria-label="搜索笔记" autocomplete="off" /></label></div>
+    <div class="notes-layout">
+      <aside class="category-panel"><h3>探索分类 <span>↙</span></h3><div class="category-list"><button class="category active" data-category="" aria-pressed="true">全部笔记 <span>{notes.length}</span></button>{categories.map(category => <button class="category" data-category={category} aria-pressed="false">{category}<span>{notes.filter(n => n.data.category === category).length}</span></button>)}</div><div class="sidebar-note"><span>✳</span><p>不必等到完美，<br />先把想法记下来。</p><small>MAKE ROOM FOR IDEAS</small></div></aside>
+      <div><div class="results-heading"><span id="result-label" aria-live="polite">共 {notes.length} 篇笔记</span><span>最近更新 ↓</span></div><div class="note-grid">{notes.map((note, index) => <a class="note-card" href={noteUrl(note.id)} data-category={note.data.category} data-search={[note.data.title, note.data.description, ...note.data.tags, note.body].join(' ').toLocaleLowerCase()}><div class="card-top"><span class="category-badge">{note.data.category}</span><span class="card-number">/ {String(index + 1).padStart(2, '0')}</span></div><h3>{note.data.title}</h3><p>{note.data.description}</p><div class="tags">{note.data.tags.map(tag => <span>#{tag}</span>)}</div><div class="card-bottom"><time datetime={formatDate(note.data.date)}>{formatDate(note.data.date)}</time>{note.data.example && <span class="example-label">示例笔记</span>}<span class="card-arrow" aria-hidden="true">↗</span></div></a>)}</div><div id="empty-state" class="empty-state" hidden><span>⌕</span><h3>暂时没有找到相关笔记</h3><p>试试其他关键词，或切换分类。</p><button id="reset-search" class="primary-link">重置筛选 ↗</button></div></div>
+    </div>
+  </section>
+  <script>
+    const input = document.querySelector<HTMLInputElement>('#search')!;
+    const buttons = [...document.querySelectorAll<HTMLButtonElement>('.category')];
+    const cards = [...document.querySelectorAll<HTMLAnchorElement>('.note-card')];
+    let category = '';
+    const params = new URLSearchParams(location.search);
+    input.value = params.get('q') || '';
+    category = buttons.some(b => b.dataset.category === params.get('category')) ? params.get('category') || '' : '';
+    function filter(updateUrl = true) {
+      const words = input.value.trim().toLocaleLowerCase().split(/\s+/).filter(Boolean);
+      let count = 0;
+      for (const card of cards) {
+        const matches = (!category || card.dataset.category === category) && words.every(word => card.dataset.search?.includes(word));
+        card.hidden = !matches;
+        if (matches) count++;
+      }
+      buttons.forEach(button => {
+        const active = button.dataset.category === category;
+        button.classList.toggle('active', active);
+        button.setAttribute('aria-pressed', String(active));
+      });
+      document.querySelector('#result-label')!.textContent = `共 ${count} 篇笔记`;
+      document.querySelector<HTMLElement>('#empty-state')!.hidden = count > 0;
+      if (updateUrl) {
+        const url = new URL(location.href);
+        input.value ? url.searchParams.set('q', input.value) : url.searchParams.delete('q');
+        category ? url.searchParams.set('category', category) : url.searchParams.delete('category');
+        history.replaceState(null, '', url);
+      }
+    }
+    input.addEventListener('input', () => filter());
+    buttons.forEach(button => button.addEventListener('click', () => { category = button.dataset.category || ''; filter(); }));
+    document.querySelector('#reset-search')?.addEventListener('click', () => { input.value = ''; category = ''; filter(); input.focus(); });
+    filter(false);
+  </script>
+</Layout>

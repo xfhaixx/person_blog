@@ -1,0 +1,7 @@
+---
+import Layout from '../layouts/Layout.astro';
+import { site, base } from '../site';
+---
+<Layout title={`关于 · ${site.name}`} description="关于 XFH 的个人笔记空间。">
+  <section class="about-page"><div class="eyebrow"><span class="status-dot"></span> BEHIND THE NOTES</div><h1>你好，我是 <span>XFH.</span><br />欢迎来到我的笔记空间。</h1><div class="prose"><p>这里用于记录学习笔记、技术实践和日常思考。我希望把零散的想法整理成清晰的知识，让未来的自己能更快找到答案。</p><blockquote><p>不追求一次写得完美，但希望每次记录都有一点收获。</p></blockquote><div class="about-card"><h2>你会在这里看到什么？</h2><ul><li><strong>技术笔记</strong>：概念梳理、代码片段与实践经验。</li><li><strong>工具与效率</strong>：让工作和学习更顺手的小方法。</li><li><strong>日常思考</strong>：值得留下来的问题、灵感和复盘。</li></ul><p>博客中的初始文章标注为「示例笔记」，用于展示排版与分类，你可以自由替换。</p></div></div><div class="about-links"><a class="primary-link" href={site.github} target="_blank" rel="noopener noreferrer">在 GitHub 找到我 ↗</a><a class="back-link" href={`${base}/#notes`}>阅读笔记 →</a></div></section>
+</Layout>

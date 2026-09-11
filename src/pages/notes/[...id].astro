@@ -1,0 +1,57 @@
+---
+import { getCollection, render } from 'astro:content';
+import type { CollectionEntry } from 'astro:content';
+import Layout from '../../layouts/Layout.astro';
+import { base, site, noteUrl, formatDate } from '../../site';
+export async function getStaticPaths() {
+  const notes = await getCollection('notes', ({ data }) => !data.draft);
+  return notes.map(note => ({ params: { id: note.id }, props: { note } }));
+}
+interface Props { note: CollectionEntry<'notes'>; }
+const { note } = Astro.props;
+const { Content, headings } = await render(note);
+const toc = headings.filter(h => h.depth === 2 || h.depth === 3);
+const related = (await getCollection('notes', ({ data }) => !data.draft)).filter(n => n.id !== note.id && n.data.category === note.data.category).slice(0, 3);
+const minutes = Math.max(1, Math.ceil((note.body?.length || 0) / 500));
+---
+<Layout title={`${note.data.title} · ${site.name}`} description={note.data.description}>
+  <div class="reading-progress" id="reading-progress" aria-hidden="true"></div>
+  <div class="article-wrapper">
+    <a class="back-link" href={`${base}/#notes`}>← 返回全部笔记</a>
+    <header class="article-header"><a class="category-badge" href={`${base}/?category=${encodeURIComponent(note.data.category)}#notes`}>{note.data.category}</a><h1>{note.data.title}</h1><p>{note.data.description}</p><div class="article-meta"><time datetime={formatDate(note.data.date)}>{formatDate(note.data.date)}</time><span>约 {minutes} 分钟阅读</span>{note.data.example && <span>示例笔记</span>}</div><div class="tags">{note.data.tags.map(tag => <a href={`${base}/?q=${encodeURIComponent(tag)}#notes`}>#{tag}</a>)}</div></header>
+    <div class="reading-layout"><div><article class="prose"><Content /></article><div class="article-end"><span>— 笔记到这里，思考还在继续 —</span><a href={`${base}/#notes`}>← 探索更多笔记</a></div>{related.length > 0 && <section class="related"><h2>同分类，继续读</h2>{related.map(n => <a href={noteUrl(n.id)}>{n.data.title}<span>↗</span></a>)}</section>}</div><aside class="toc"><div class="toc-inner"><h2>本篇目录</h2>{toc.length ? <nav aria-label="文章目录">{toc.map(h => <a class:list={[{ 'toc-sub': h.depth === 3 }]} href={`#${h.slug}`}>{h.text}</a>)}</nav> : <p class="muted">这是一篇短笔记。</p>}<a class="back-top" href="#main">↑ 回到顶部</a></div></aside></div>
+  </div>
+  <script>
+    document.querySelectorAll<HTMLPreElement>('.prose pre').forEach(pre => {
+      const button = document.createElement('button');
+      button.className = 'copy-button';
+      button.textContent = '复制';
+      button.setAttribute('aria-label', '复制代码');
+      button.addEventListener('click', async () => {
+        try { await navigator.clipboard.writeText(pre.querySelector('code')?.textContent || ''); button.textContent = '已复制 ✓'; }
+        catch { button.textContent = '请手动选择复制'; }
+        setTimeout(() => { button.textContent = '复制'; }, 2000);
+      });
+      pre.append(button);
+    });
+    const progress = document.querySelector<HTMLElement>('#reading-progress')!;
+    const update = () => {
+      const total = document.documentElement.scrollHeight - innerHeight;
+      progress.style.width = `${total > 0 ? Math.min(100, scrollY / total * 100) : 100}%`;
+    };
+    addEventListener('scroll', update, { passive: true });
+    addEventListener('resize', update);
+    update();
+    const links = [...document.querySelectorAll<HTMLAnchorElement>('.toc nav a')];
+    const observer = new IntersectionObserver(entries => {
+      for (const entry of entries) if (entry.isIntersecting) {
+        links.forEach(link => {
+          const active = decodeURIComponent(link.hash.slice(1)) === entry.target.id;
+          link.classList.toggle('active', active);
+          if (active) link.setAttribute('aria-current', 'location'); else link.removeAttribute('aria-current');
+        });
+      }
+    }, { rootMargin: '-80px 0px -60% 0px' });
+    document.querySelectorAll('.prose h2, .prose h3').forEach(h => observer.observe(h));
+  </script>
+</Layout>

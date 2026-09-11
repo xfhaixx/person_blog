@@ -1,0 +1,47 @@
+---
+import '../styles/global.css';
+import { site, base } from '../site';
+interface Props { title?: string; description?: string; }
+const { title = site.title, description = site.description } = Astro.props;
+---
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="description" content={description} />
+    <meta name="color-scheme" content="dark light" />
+    <meta property="og:title" content={title} />
+    <meta property="og:description" content={description} />
+    <meta property="og:type" content="website" />
+    <link rel="icon" type="image/svg+xml" href={`${base}/favicon.svg`} />
+    <link rel="canonical" href={new URL(Astro.url.pathname, Astro.site)} />
+    <title>{title}</title>
+    <script is:inline>
+      try {
+        document.documentElement.dataset.theme = localStorage.getItem('theme') || 'dark';
+      } catch { document.documentElement.dataset.theme = 'dark'; }
+    </script>
+  </head>
+  <body>
+    <a class="skip-link" href="#main">跳到主要内容</a>
+    <header class="site-header">
+      <a class="brand" href={`${base}/`} aria-label="XFH 博客首页"><span class="brand-mark">x<span>.</span></span><span>XFH<span class="brand-divider"> / </span><span class="brand-sub">NOTES</span></span></a>
+      <nav aria-label="主导航">
+        <a href={`${base}/#notes`}>笔记</a>
+        <a href={`${base}/about/`}>关于</a>
+        <a class="github-nav" href={site.github} target="_blank" rel="noopener noreferrer">GitHub ↗</a>
+        <button id="theme-toggle" class="icon-button" type="button" aria-label="切换深浅主题" title="切换深浅主题">◐</button>
+      </nav>
+    </header>
+    <main id="main"><slot /></main>
+    <footer class="site-footer"><span>© {new Date().getFullYear()} {site.name} <span class="muted">· 用文字保存思考</span></span><a href={site.github} target="_blank" rel="noopener noreferrer">保持好奇，持续生长 ↗</a></footer>
+    <script>
+      document.querySelector('#theme-toggle')?.addEventListener('click', () => {
+        const theme = document.documentElement.dataset.theme === 'dark' ? 'light' : 'dark';
+        document.documentElement.dataset.theme = theme;
+        try { localStorage.setItem('theme', theme); } catch {}
+      });
+    </script>
+  </body>
+</html>
